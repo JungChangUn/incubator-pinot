@@ -56,7 +56,8 @@ import org.joda.time.Period;
 
 import static org.apache.pinot.thirdeye.dataframe.DoubleSeries.*;
 import static org.apache.pinot.thirdeye.dataframe.util.DataFrameUtils.*;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Components(title = "Percentage change rule detection", type = "PERCENTAGE_RULE", tags = {
     DetectionTag.RULE_DETECTION}, description =
@@ -79,6 +80,8 @@ public class PercentageChangeRuleDetector implements AnomalyDetector<PercentageC
   private static final String COL_ANOMALY = "anomaly";
   private static final String COL_PATTERN = "pattern";
   private static final String COL_CHANGE_VIOLATION = "change_violation";
+
+  private static final Logger LOGGER = LoggerFactory.getLogger(AggregationPhaseJob.class);
 
   @Override
   public DetectionResult runDetection(Interval window, String metricUrn) {
@@ -112,6 +115,7 @@ public class PercentageChangeRuleDetector implements AnomalyDetector<PercentageC
     }
 
     dfCurr = dfCurr.renameSeries(COL_VALUE, COL_CURR);
+    LOGGER.info(dfCurr.toString());
     DataFrame df = new DataFrame(dfCurr).addSeries(dfBase);
 
     // calculate percentage change
@@ -147,6 +151,7 @@ public class PercentageChangeRuleDetector implements AnomalyDetector<PercentageC
   @Override
   public TimeSeries computePredictedTimeSeries(MetricSlice slice) {
     DataFrame df = RuleBaselineProvider.buildBaselines(slice, this.baseline, this.dataFetcher);
+    
     return TimeSeries.fromDataFrame(constructPercentageChangeBoundaries(df));
   }
 
@@ -186,6 +191,7 @@ public class PercentageChangeRuleDetector implements AnomalyDetector<PercentageC
     this.pattern = Pattern.valueOf(spec.getPattern().toUpperCase());
 
     this.monitoringGranularity = spec.getMonitoringGranularity();
+    // LOGGER.info("AggregationPhaseJob.AggregationPhaseMapper.setup()");
     if (this.monitoringGranularity.endsWith(TimeGranularity.MONTHS) || this.monitoringGranularity.endsWith(TimeGranularity.WEEKS)) {
       this.timeGranularity = MetricSlice.NATIVE_GRANULARITY;
     } else {
